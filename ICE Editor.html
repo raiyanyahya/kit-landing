@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KIT — A unified workspace</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     oklch(8.5% 0.012 240);
+      --bg2:    oklch(11.5% 0.012 240);
+      --bg3:    oklch(15% 0.01 240);
+      --line:   oklch(22% 0.008 240);
+      --text:   oklch(91% 0.006 80);
+      --dim:    oklch(72% 0.006 240);
+      --dimmer: oklch(55% 0.006 240);
+      --accent: rgb(250, 250, 250);
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+    }
+
+    html, body, #root {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      font-family: var(--font-body);
+    }
+
+    .poster {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 52px 1fr 1px 180px;
+      grid-template-columns: 1fr;
+      overflow: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 36px;
+      border-bottom: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+    .nav-logo {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+    .nav-tag {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      color: var(--dimmer);
+      text-transform: uppercase;
+    }
+    .nav-cta {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid oklch(76% 0.19 145 / 0.35);
+      padding: 5px 14px;
+      border-radius: 2px;
+      transition: background 0.2s;
+    }
+    .nav-cta:hover { background: oklch(76% 0.19 145 / 0.1); }
+
+    /* ── MAIN AREA ── */
+    .main {
+      display: grid;
+      grid-template-columns: 220px 1px 1fr 1px 280px;
+      overflow: hidden;
+    }
+
+    /* ── LEFT PANEL ── */
+    .panel-left {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 32px 28px;
+      border-right: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 32px 32px;
+      opacity: 0.35;
+    }
+    .mode-list {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mode-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 2px;
+      transition: background 0.3s, color 0.3s;
+      cursor: default;
+    }
+    .mode-item.active {
+      background: oklch(76% 0.19 145 / 0.08);
+    }
+    .mode-item-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--dimmer);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .mode-item.active .mode-item-dot { background: var(--accent); }
+    .mode-item-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--dim);
+      transition: color 0.3s;
+    }
+    .mode-item.active .mode-item-label { color: var(--text); }
+    .mode-item-key {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--dimmer);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .mode-item.active .mode-item-key { opacity: 1; color: var(--accent); }
+
+    .left-footer {
+      position: relative;
+      z-index: 1;
+    }
+    .left-footer-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      color: var(--dimmer);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .left-footer-val {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--dim);
+    }
+    .left-footer-val span { color: var(--accent); }
+
+    /* ── DIVIDER ── */
+    .vdivider { background: var(--line); }
+    .hdivider { background: var(--line); }
+
+    /* ── CENTER PANEL ── */
+    .panel-center {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px 52px;
+      position: relative;
+      overflow: hidden;
+    }
+    .center-glow {
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 500px;
+      height: 400px;
+      background: radial-gradient(ellipse, oklch(76% 0.19 145 / 0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      white-space: nowrap;
+    }
+    .headline {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-size: clamp(52px, 6.5vw, 96px);
+      line-height: 1.0;
+      letter-spacing: -0.025em;
+      color: var(--text);
+      margin-bottom: 28px;
+      position: relative;
+      z-index: 1;
+    }
+    .headline em {
+      font-style: italic;
+      color: var(--accent);
+    }
+    .tagline {
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--dim);
+      line-height: 1.75;
+      max-width: 460px;
+      margin-bottom: 36px;
+      position: relative;
+      z-index: 1;
+    }
+    .cta-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+      flex-wrap: wrap;
+    }
+    .cta-primary {
+      flex: 0 0 auto;
+    }
+    .cta-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--bg);
+      background: var(--accent);
+      text-decoration: none;
+      padding: 13px 36px;
+      border-radius: 2px;
+      transition: background 0.2s;
+    }
+    .cta-primary:hover { background: oklch(80% 0.19 145); }
+    .cta-secondary {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--dimmer);
+      text-decoration: none;
+    }
+
+    .mode-preview {
+      margin-top: 24px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+    .preview-chip {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+      background: var(--bg2);
+      border: 1px solid var(--line);
+      padding: 5px 10px;
+      border-radius: 2px;
+      text-transform: uppercase;
+      transition: all 0.3s;
+    }
+    .preview-chip.active {
+      color: var(--accent);
+      border-color: oklch(76% 0.19 145 / 0.4);
+      background: oklch(76% 0.19 145 / 0.06);
+    }
+
+    /* ── RIGHT PANEL ── */
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 32px 28px;
+      border-left: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .right-section-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      color: var(--dimmer);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .feature-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .feature-row:first-child { border-top: 1px solid var(--line); }
+    .feature-num {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--dimmer);
+      padding-top: 2px;
+      flex-shrink: 0;
+      width: 20px;
+    }
+    .feature-text {
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+    .feature-text strong {
+      display: block;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 2px;
+      font-size: 12px;
+    }
+
+    .shortcut-mini-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .shortcut-mini-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .shortcut-mini-label {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--dim);
+    }
+    .kbd {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--dim);
+      background: var(--bg3);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      padding: 2px 6px;
+    }
+
+    /* ── BOTTOM STRIP ── */
+    .strip {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      border-top: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .strip-cell {
+      padding: 20px 24px;
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: background 0.2s;
+      cursor: default;
+    }
+    .strip-cell:last-child { border-right: none; }
+    .strip-cell:hover { background: var(--bg2); }
+    .strip-cell { border-top: 2px solid transparent; transition: background 0.2s, border-color 0.2s; }
+    .strip-cell:hover { border-top-color: var(--cell-accent, var(--accent)); }
+    .strip-cell-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .strip-cell-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 300;
+      line-height: 1.1;
+      color: var(--text);
+    }
+    .strip-cell-title em { font-style: italic; }
+    .strip-cell-desc {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--dim);
+      line-height: 1.6;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 900px) {
+      html, body, #root { overflow: auto; height: auto; }
+      .poster { height: auto; grid-template-rows: 52px 1fr; min-height: 100vh; }
+      .main { grid-template-columns: 1fr !important; height: calc(100vh - 52px); min-height: 500px; }
+      .vdivider { display: none; }
+      .panel-left { display: none; }
+      .panel-center {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: 1fr !important;
+        height: 100%;
+      }
+      .panel-right { display: none; }
+      .strip { display: none; }
+      .hdivider { display: none; }
+      .gif-panel { display: none !important; }
+      .chips-row { display: none !important; }
+      .mobile-downloads { display: none !important; }
+      nav { padding: 0 20px; }
+      .nav-tag { display: none; }
+      .nav-download-links { display: none !important; }
+      .headline { font-size: clamp(40px, 12vw, 72px) !important; }
+      .tagline { font-size: 14px; max-width: 100%; }
+    }
+    .mobile-downloads { display: none; }
+    @media (max-width: 500px) {
+      .headline { font-size: clamp(36px, 11vw, 56px) !important; }
+    }
+    @media (max-width: 500px) {
+      .strip { grid-template-columns: 1fr !important; }
+      nav { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const MODES = [
+  { label: 'Editor',        key: 'Ctrl+0' },
+  { label: 'Writing',       key: 'toolbar' },
+  { label: 'Browser',       key: 'Ctrl+B' },
+  { label: 'AI Assistant',  key: 'ai …'   },
+  { label: 'Agent',         key: 'toolbar' },
+  { label: 'Stairs',        key: 'toolbar' },
+  { label: 'Email',         key: 'toolbar' },
+  { label: 'Whiteboard',    key: 'toolbar' },
+  { label: 'Terminal',      key: 'help'    },
+  { label: 'Git',           key: '⎇ main'  },
+  { label: 'Calendar',      key: 'toolbar' },
+];
+
+const FEATURES = [
+  { title: 'AI Orchestration', desc: 'Chain models into routines. Build your own pipelines.' },
+  { title: 'Bring your own keys', desc: 'OpenAI & Claude. Your key, your cost, your control.' },
+  { title: 'Email via IMAP', desc: 'Read, compose and manage mail without leaving KIT.' },
+  { title: 'Context-aware AI', desc: 'Knows your file, selection, and browser tab.' },
+  { title: 'Local-first', desc: 'Your files, your disk. No cloud lock-in.' },
+];
+
+const SHORTCUTS = [
+  ['Project search',  'Ctrl+K'],
+  ['Jump to def.',    'F12'],
+  ['Toggle dark',     'Ctrl+D'],
+  ['Toggle sidebar',  'Ctrl+E'],
+];
+
+const STRIP = [
+  { label: '01 — Editor',    title: <><em>Code</em> editor</>,       desc: 'CodeMirror 6. 20+ languages, jump to def.',  accent: 'var(--accent)' },
+  { label: '02 — Writing',   title: <><em>Write</em> freely</>,      desc: 'Block-based studio. Auto-saved to disk.',    accent: 'var(--accent)' },
+  { label: '03 — Browser',   title: <><em>Browse</em> inside</>,     desc: 'Chromium embedded. Tabs persist on restart.',accent: 'var(--accent)' },
+  { label: '04 — Agent',     title: <><em>Agent</em> AI</>,          desc: 'Autonomous tasks. File, shell & search tools.', accent: 'var(--accent)' },
+  { label: '05 — Stairs',    title: <><em>Automate</em></>,          desc: 'Visual pipelines. Shell · AI · HTTP · File steps.', accent: 'var(--accent)' },
+  { label: '06 — Email',     title: <><em>Mail</em> via IMAP</>,     desc: 'Full client. Works with any provider.',      accent: 'var(--accent)' },
+  { label: '07 — Whiteboard',title: <><em>Sketch</em> ideas</>,      desc: 'Infinite canvas. Sticky notes, pen, shapes.',accent: 'var(--accent)' },
+  { label: '08 — Terminal',  title: <><em>Build</em> anything</>,    desc: 'Shell, git, and version control.',  accent: 'var(--accent)' },
+];
+
+
+function KitLogo() {
+  return (
+    <img src="uploads/kiticon-512.png" alt="Kit" width="26" height="26" style={{borderRadius:6, display:'block'}} />
+  );
+}
+
+const FALLBACK_RELEASE = {
+  version: 'v2.1.1',
+  dmg:      'https://github.com/raiyanyahya/Kit/releases/download/v2.1.1/Kit-2.1.1.dmg',
+  appimage: 'https://github.com/raiyanyahya/Kit/releases/download/v2.1.1/Kit-2.1.1.AppImage',
+  deb:      'https://github.com/raiyanyahya/Kit/releases/download/v2.1.1/kit_2.1.1_amd64.deb',
+};
+
+function App() {
+  const [activeMode, setActiveMode] = useState(0);
+  const [release, setRelease] = useState(FALLBACK_RELEASE);
+
+  useEffect(() => {
+    const t = setInterval(() => setActiveMode(m => (m + 1) % MODES.length), 1800);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    fetch('https://api.github.com/repos/raiyanyahya/Kit/releases/latest')
+      .then(r => r.json())
+      .then(data => {
+        const assets = data.assets || [];
+        const find = ext => (assets.find(a => a.name.endsWith(ext)) || {}).browser_download_url;
+        setRelease({
+          version:  data.tag_name            || FALLBACK_RELEASE.version,
+          dmg:      find('.dmg')             || FALLBACK_RELEASE.dmg,
+          appimage: find('.AppImage')        || FALLBACK_RELEASE.appimage,
+          deb:      find('.deb')             || FALLBACK_RELEASE.deb,
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <div className="poster">
+      {/* NAV */}
+      <nav>
+        <a className="nav-logo" href="#" style={{display:'flex',alignItems:'center',gap:12}}>
+          <KitLogo />
+          <span style={{fontFamily:'var(--font-mono)',fontSize:13,fontWeight:700,letterSpacing:'0.18em',color:'var(--text)'}}>KIT</span>
+        </a>
+        <div className="nav-right">
+          <span className="nav-tag">{release.version}</span>
+<div className="nav-download-links" style={{display:'flex',alignItems:'center',gap:6}}>
+          <a href={release.dmg} target="_blank" rel="noopener" style={{fontFamily:'var(--font-mono)',fontSize:10,letterSpacing:'0.08em',color:'var(--dim)',textDecoration:'none',display:'flex',alignItems:'center',gap:5,padding:'4px 10px',border:'1px solid var(--line)',borderRadius:2,transition:'all 0.2s'}} onMouseOver={e=>e.currentTarget.style.color='var(--text)'} onMouseOut={e=>e.currentTarget.style.color='var(--dim)'}>
+            ↓ macOS
+          </a>
+          <a href={release.appimage} target="_blank" rel="noopener" style={{fontFamily:'var(--font-mono)',fontSize:10,letterSpacing:'0.08em',color:'var(--dim)',textDecoration:'none',display:'flex',alignItems:'center',gap:5,padding:'4px 10px',border:'1px solid var(--line)',borderRadius:2,transition:'all 0.2s'}} onMouseOver={e=>e.currentTarget.style.color='var(--text)'} onMouseOut={e=>e.currentTarget.style.color='var(--dim)'}>
+            ↓ AppImage
+          </a>
+          <a href={release.deb} target="_blank" rel="noopener" style={{fontFamily:'var(--font-mono)',fontSize:10,letterSpacing:'0.08em',color:'var(--dim)',textDecoration:'none',display:'flex',alignItems:'center',gap:5,padding:'4px 10px',border:'1px solid var(--line)',borderRadius:2,transition:'all 0.2s'}} onMouseOver={e=>e.currentTarget.style.color='var(--text)'} onMouseOut={e=>e.currentTarget.style.color='var(--dim)'}>
+            ↓ .deb
+          </a>
+          </div>
+          <a className="nav-cta" href="https://github.com/raiyanyahya/Kit" target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:6}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            GitHub
+          </a>
+        </div>
+      </nav>
+
+      {/* MAIN */}
+      <div className="main">
+        {/* LEFT */}
+        <div className="panel-left">
+          <div className="grid-bg"></div>
+          <div className="mode-list">
+            <p style={{ fontFamily:'var(--font-mono)', fontSize:9, letterSpacing:'0.18em', color:'var(--dimmer)', textTransform:'uppercase', marginBottom:10 }}>Modes</p>
+            {MODES.map((m, i) => {
+              const dotColors = ['var(--accent)','var(--accent)','var(--accent)','var(--accent)','var(--accent)','var(--accent)','var(--accent)','var(--accent)','var(--accent)','var(--accent)','var(--accent)','var(--accent)'];
+              const col = dotColors[i % dotColors.length];
+              return (
+                <div key={m.label} className={`mode-item ${i === activeMode ? 'active' : ''}`} style={i === activeMode ? {'--active-col': col} : {}}>
+                  <div className="mode-item-dot" style={i === activeMode ? {background: col} : {}}></div>
+                  <span className="mode-item-label" style={i === activeMode ? {color: col} : {}}>{m.label}</span>
+                  <span className="mode-item-key" style={i === activeMode ? {color: col} : {}}>{m.key}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="left-footer">
+            <p className="left-footer-label">Models</p>
+            <p className="left-footer-val"><span>OpenAI</span> · <span>Anthropic</span> · BYOK</p>
+          </div>
+        </div>
+
+        <div className="vdivider"></div>
+
+        {/* CENTER */}
+        <div className="panel-center" style={{display:'grid', gridTemplateColumns:'1fr 1.4fr', gridTemplateRows:'1fr auto', gap:0, padding:0, overflow:'hidden'}}>
+          {/* Left: headline + CTA */}
+          <div style={{display:'flex',flexDirection:'column',justifyContent:'center',padding:'32px 24px 32px 28px',position:'relative',overflow:'visible'}}>
+            <div className="center-glow"></div>
+            <p className="eyebrow">KIT — UNIFIED WORKSPACE</p>
+            <h1 className="headline">
+              One window.<br />
+              <em>Everything</em><br />
+              you need.
+            </h1>
+            <p className="tagline">
+              Code, write, browse, run autonomous agents, automate workflows, and manage email — all in one quiet window. OpenAI and Anthropic, bring your own keys.
+            </p>
+            <div className="cta-row">
+              <a className="cta-primary" href="https://github.com/raiyanyahya/Kit" target="_blank" rel="noopener" style={{display:'inline-flex',alignItems:'center',gap:8}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                View on GitHub
+              </a>
+              <span className="cta-secondary">macOS · Linux · Free &amp; open source</span>
+            </div>
+            {/* Mobile download links */}
+            <div className="mobile-downloads" style={{flexDirection:'column',gap:8,marginTop:24,paddingTop:24,borderTop:'1px solid var(--line)'}}>
+              <p style={{fontFamily:'var(--font-mono)',fontSize:9,letterSpacing:'0.15em',color:'var(--dimmer)',textTransform:'uppercase',marginBottom:4}}>Download {release.version}</p>
+              <a href={release.dmg} target="_blank" rel="noopener" style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--accent)',textDecoration:'none',padding:'10px 0',borderBottom:'1px solid var(--line)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                macOS .dmg <span style={{color:'var(--dimmer)'}}>↓</span>
+              </a>
+              <a href={release.appimage} target="_blank" rel="noopener" style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--dim)',textDecoration:'none',padding:'10px 0',borderBottom:'1px solid var(--line)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                Linux .AppImage <span style={{color:'var(--dimmer)'}}>↓</span>
+              </a>
+              <a href={release.deb} target="_blank" rel="noopener" style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--dim)',textDecoration:'none',padding:'10px 0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                Linux .deb <span style={{color:'var(--dimmer)'}}>↓</span>
+              </a>
+            </div>
+          </div>
+          {/* Right: GIF floating */}
+          <div className="gif-panel" style={{display:'flex',alignItems:'center',justifyContent:'flex-start',overflow:'hidden',position:'relative',background:'var(--bg)',paddingLeft:24}}>
+            <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse 80% 80% at 50% 50%, oklch(76% 0.18 145 / 0.04) 0%, transparent 70%)',pointerEvents:'none'}}></div>
+            <img
+              src="uploads/Loom _ Free Screen & Video Recording Software _ Loom - 1 May 2026 (1)-51b73bb1.gif"
+              alt="Kit workspace"
+              style={{
+                width:'100%',
+                maxWidth:640,
+                borderRadius:8,
+                border:'1px solid var(--line)',
+                boxShadow:'0 24px 80px oklch(0% 0 0 / 0.7), 0 0 0 1px oklch(100% 0 0 / 0.04)',
+                display:'block',
+                position:'relative',
+                zIndex:1,
+              }}
+            />
+          </div>
+          {/* Chips: full width bottom row */}
+          <div className="chips-row" style={{gridColumn:'1 / -1', borderTop:'1px solid var(--line)', padding:'12px 52px', display:'flex', gap:6, alignItems:'center', overflow:'hidden'}}>
+            {MODES.slice(0, 11).map((m, i) => {
+              const col = 'var(--accent)';
+              return (
+                <div key={m.label} className={`preview-chip ${i === activeMode ? 'active' : ''}`}
+                  style={i === activeMode ? {color: col, borderColor: col + '66', background: col + '12'} : {}}>
+                  {m.label}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="vdivider"></div>
+
+        {/* RIGHT */}
+        <div className="panel-right">
+          <div>
+            <p className="right-section-label">Why KIT</p>
+            <div className="feature-list">
+              {FEATURES.map((f, i) => (
+                <div className="feature-row" key={f.title}>
+                  <span className="feature-num">0{i+1}</span>
+                  <span className="feature-text">
+                    <strong>{f.title}</strong>
+                    {f.desc}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="right-section-label">Shortcuts</p>
+            <div className="shortcut-mini-list">
+              {SHORTCUTS.map(([label, key]) => (
+                <div className="shortcut-mini-row" key={key}>
+                  <span className="shortcut-mini-label">{label}</span>
+                  <span className="kbd">{key}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* DIVIDER */}
+      <div className="hdivider"></div>
+
+      {/* BOTTOM STRIP */}
+      <div className="strip">
+        {STRIP.map(s => (
+          <div className="strip-cell" key={s.label} style={{'--cell-accent': s.accent}}>
+            <span className="strip-cell-label" style={{color: s.accent}}>{s.label}</span>
+            <span className="strip-cell-title">{s.title}</span>
+            <span className="strip-cell-desc">{s.desc}</span>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
